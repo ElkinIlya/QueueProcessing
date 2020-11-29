@@ -14,6 +14,10 @@ struct qnode {
 	TElement getData() {
 		return data;
 	}
+
+	void print() {
+		cout << data;
+	}
 };
 
 template<typename TElement>
@@ -38,6 +42,7 @@ struct qlist {
 			return front->getData();
 		else {
 			cerr << "Queue is empty" << endl;
+			return TElement();
 		}
 	}
 
@@ -50,6 +55,7 @@ struct qlist {
 			}
 			else {
 				front = nullptr;
+				size--;
 			}
 		}
 		else {
@@ -69,7 +75,19 @@ struct qlist {
 		}
 		else {
 			front = new_node;
+			size++;
 		}
+	}
+
+	void printQueue() {
+		cout << "Front> ";
+		auto tmp = front;
+		while (tmp != nullptr) {
+			tmp->print();
+			if (tmp->prev != nullptr) cout << " -> ";
+			tmp = tmp->prev;
+		}
+		cout << endl;
 	}
 };
 
@@ -81,6 +99,11 @@ struct request {
 	request(int id, float t1, float t2) : id(id), cycles(1), t1(t1), t2(t2) {}
 };
 
+ostream& operator<<(ostream& os, const request& r) {
+	os << r.id;
+	return os;
+}
+
 float get_rand(float t1, float t2) {
 	return (float(rand()) / RAND_MAX) * (t2 - t1) + t1;
 }
@@ -89,28 +112,32 @@ int main() {
 
 	int cnt = 0;
 	int in = 0;
-	request reqs[1000];
+	request reqs[10];
 	reqs[0] = request(0, get_rand(0.f, 10.f), get_rand(0.f, 2.f));
-	for (int i = 1; i < 1000; ++i) {
-		reqs[i] = request(i, get_rand(0.f, 10.f) + reqs[i - 1].t1, get_rand(0.f, 2.f));
+	for (int i = 0; i < 10; ++i) {
+		reqs[i] = request(i + 1, get_rand(0.f, 10.f) + reqs[i - 1].t1, get_rand(0.f, 2.f));
 	}
 	qlist<request> q;
 	float beg = clock();
 	float last_action = 0;
 	float idle = 0;
 	float max_time = 0;
-	bool fl[11];
-	for (int i = 0; i < 11; ++i) fl[i] = false;
-	while (cnt < 1000) {
-		if (in < 1000 && (clock() - beg) >= reqs[in].t1) {
+	while (cnt < 10) {
+		if (in < 10 && (clock() - beg) >= reqs[in].t1) {
 			q.push(reqs[in]);
 			max_time = max(max_time, reqs[in].t2);
 			idle += clock() - last_action;
 			in++;
+			cout << "Processed: " << cnt << ", requests in: " << in << ", current queue size: " << q.get_size() << ", time: " << clock() - beg <<
+				" idle: " << idle << ", max time for request: " << max_time << endl;
+			q.printQueue();
 		}
 		if (!q.if_empty() && ((clock() - beg) >= q.getFront().t1 + q.getFront().t2)) {
 			auto tmp = q.getFront();
 			q.pop();
+			cout << "Processed: " << cnt << ", requests in: " << in << ", current queue size: " << q.get_size() << ", time: " << clock() - beg <<
+				" idle: " << idle << ", max time for request: " << max_time << endl;
+			q.printQueue();
 			tmp.t1 = clock() - beg;
 			tmp.cycles++;
 			if (tmp.cycles <= 4) {
@@ -122,11 +149,6 @@ int main() {
 			else {
 				cnt++;
 			}
-		}
-		if ((cnt % 100) == 0 && !fl[cnt / 100]) {
-			cout << "Processed: " << cnt << ", requests in: " << in << ", current queue size: " << q.get_size() << ", time: " << clock() - beg <<
-				" idle: " << idle << ", max time for request: " << max_time << endl;
-			fl[cnt / 100] = true;
 		}
 	}
 	return 0;
